@@ -474,7 +474,7 @@ RUN set -x && export DEBIAN_FRONTEND=noninteractive && \
 && rm -rf /var/lib/apt/lists/*
 
 # Python modules used by resulttool
-RUN python3 -m pip install jinja2 iterfzf
+RUN python3 -m pip install jinja2 iterfzf==0.5.0.20.0
 
 # Copy prebuilt items
 COPY --from=prebuilt-icecream /dist/icecream /
@@ -543,9 +543,17 @@ RUN set -x && export DEBIAN_FRONTEND=noninteractive && \
     wine64 \
     wine32 \
     && \
+# Add packagecloud apt source and gpg key and install git-lfs
+    install -d -m 0755 -o root -g root /etc/apt/sources.list.d && \
+    curl -sSf 'https://packagecloud.io/install/repositories/github/git-lfs/config_file.list?os=Ubuntu&dist=bionic&source=script' > /etc/apt/sources.list.d/github_git-lfs.list && \
+    mkdir -p /etc/apt/keyrings && \
+    curl -fsSL 'https://packagecloud.io/github/git-lfs/gpgkey' | gpg --dearmor > /etc/apt/keyrings/github_git-lfs-archive-keyring.gpg && \
+    apt-get -y update && \
+    apt-get -y install git-lfs && \
 # Configure git lfs
-    git lfs install --system > /dev/null 2>&1 \
-&& rm -rf /var/lib/apt/lists/*
+    git lfs install --system > /dev/null 2>&1 && \
+# Clean up apt-cache
+    rm -rf /var/lib/apt/lists/*
 
 # Python modules used by resulttool
 RUN python3 -m pip install iterfzf testtools python-subunit
@@ -622,8 +630,18 @@ RUN set -x && export DEBIAN_FRONTEND=noninteractive && \
     xxd \
 # Testing requirements
     wine64 \
-    wine32 \
-&& rm -rf /var/lib/apt/lists/*
+    wine32 && \
+# Add packagecloud apt source and gpg key and install git-lfs
+    install -d -m 0755 -o root -g root /etc/apt/sources.list.d && \
+    curl -sSf 'https://packagecloud.io/install/repositories/github/git-lfs/config_file.list?os=Ubuntu&dist=focal&source=script' > /etc/apt/sources.list.d/github_git-lfs.list && \
+    mkdir -p /etc/apt/keyrings && \
+    curl -fsSL 'https://packagecloud.io/github/git-lfs/gpgkey' | gpg --dearmor > /etc/apt/keyrings/github_git-lfs-archive-keyring.gpg && \
+    apt-get -y update && \
+    apt-get -y install git-lfs && \
+# Configure git lfs
+    git lfs install --system > /dev/null 2>&1 && \
+# Clean up apt-cache
+    rm -rf /var/lib/apt/lists/*
 
 RUN python3 -m pip install iterfzf testtools python-subunit
 
