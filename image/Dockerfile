@@ -390,6 +390,8 @@ RUN set -x && export DEBIAN_FRONTEND=noninteractive && \
     python-crypto \
     python-six \
     python3-six \
+# Connectivity
+    ssh \
 # An updated version of Git (from the PPA source above)
 # that supports doing Yocto externalsrc recipes against free-
 # standing working copies that use Git worktrees.
@@ -459,6 +461,8 @@ RUN set -x && export DEBIAN_FRONTEND=noninteractive && \
     python-crypto \
     python-six \
     python3-six \
+# Connectivity
+    ssh \
 # An updated version of Git (from the PPA source above)
 # that supports doing Yocto externalsrc recipes against free-
 # standing working copies that use Git worktrees.
@@ -531,6 +535,8 @@ RUN set -x && export DEBIAN_FRONTEND=noninteractive && \
     python-crypto \
     python-six \
     python3-six \
+# Connectivity
+    ssh \
 # Corollary to the core Yocto gcc-multilib package. Allows various
 # prebuilt native tools to work
     g++-multilib \
@@ -618,6 +624,8 @@ RUN set -x && export DEBIAN_FRONTEND=noninteractive && \
     python-crypto \
     python-six \
     python3-six \
+# Connectivity
+    ssh \
 # Corollary to the core Yocto gcc-multilib package. Allows various
 # prebuilt native tools to work
     g++-multilib \
@@ -701,6 +709,8 @@ RUN set -x && export DEBIAN_FRONTEND=noninteractive && \
     findutils \
 # Required for some poorly written 3rd party recipes :(
     python3-six \
+# Connectivity
+    ssh \
 # Corollary to the core Yocto gcc-multilib package. Allows various
 # prebuilt native tools to work
     g++-multilib \
