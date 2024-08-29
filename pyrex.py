@@ -59,6 +59,10 @@ class Config(configparser.ConfigParser):
         self.optionxform = lambda option: option
 
 
+class ParsingError(Exception):
+    pass
+
+
 def read_default_config(keep_defaults):
     with open(os.path.join(PYREX_ROOT, "pyrex.ini"), "r") as f:
         line = f.read().replace("@CONFVERSION@", PYREX_CONFVERSION)
@@ -346,7 +350,34 @@ def parse_bind_options(bind):
             else:
                 bad_options.append(opt)
 
-    return bind, options, bad_options
+    if bad_options:
+        raise ParsingError(
+            "bad option(s) '%s' for bind %s" % (" ".join(bad_options), bind)
+        )
+
+    binds = bind.split(":")
+
+    if len(binds) > 2:
+        raise ParsingError("too many colons in run.bind entry '%s'." % bind)
+    elif len(binds) == 1:
+        src = bind
+        dst = bind
+    else:
+        src = binds[0]
+        dst = binds[1]
+
+    return src, dst, options
+
+
+def prettyprint_bind(src, dst, options):
+    options_keys = list(vars(options).keys())
+    options_keys.sort()
+    options_str = ""
+    for k in options_keys:
+        if getattr(options, k):
+            options_str = options_str + ",{option}".format(option=k)
+
+    return "{src}:{dst}{options}".format(src=src, dst=dst, options=options_str)
 
 
 def prep_container(
@@ -527,23 +558,43 @@ def prep_container(
         + os.environ.get("PYREX_CONFIG_BIND", "").split()
         + extra_bind
     )
-    for b in set(binds):
-        b, options, bad_options = parse_bind_options(b)
-        if bad_options:
-            print("Error: bad option(s) '%s' for bind %s" % (" ".join(bad_options), b))
+
+    binds_by_dst = {}
+    prettyprinted_binds_by_dst = {}
+
+    for b in binds:
+        try:
+            src, dst, options = parse_bind_options(b)
+        except ParsingError as e:
+            print("Error: %s" % e)
             return []
 
-        if not os.path.exists(b):
+        if dst in binds_by_dst:
+            # Allow identical entries
+            if prettyprint_bind(src, dst, options) == prettyprinted_binds_by_dst[dst]:
+                continue
+            else:
+                print(
+                    "Error: more than one bind for same destination path {dst}: '{bind1}' and '{bind2}'".format(
+                        dst=dst, bind1=binds_by_dst[dst], bind2=b
+                    )
+                )
+                return []
+        else:
+            binds_by_dst[dst] = b
+            prettyprinted_binds_by_dst[dst] = prettyprint_bind(src, dst, options)
+
+        if not os.path.exists(src):
             if options.optional:
                 continue
-            print("Error: bind source path {b} does not exist".format(b=b))
+            print("Error: bind source path {src} does not exist".format(src=src))
             return []
 
         engine_args.extend(
             [
                 "--mount",
-                "type=bind,src={b},dst={b}{ro}".format(
-                    b=b, ro=",readonly" if options.readonly else ""
+                "type=bind,src={src},dst={dst}{ro}".format(
+                    src=src, dst=dst, ro=",readonly" if options.readonly else ""
                 ),
             ]
         )

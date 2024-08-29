@@ -582,6 +582,84 @@ class PyrexImageType_base(PyrexTest):
         )
         self.assertIn("Error: bad option(s) 'bad-option' for bind", s)
 
+    def test_bind_dest(self):
+        temp_dir = tempfile.mkdtemp("-pyrex")
+        self.addCleanup(shutil.rmtree, temp_dir)
+
+        temp_file = os.path.join(temp_dir, "data")
+
+        conf = self.get_config()
+        conf["run"]["bind"] += " %s:/foo" % (temp_dir)
+        conf.write_conf()
+
+        self.assertPyrexContainerShellCommand("echo 123 > /foo/data")
+
+        with open(temp_file, "r") as f:
+            self.assertEqual(f.read(), "123\n")
+
+    def test_malformed_bind_dest(self):
+
+        b = "/src:/dst:illegal-token"
+
+        conf = self.get_config()
+        conf["run"]["bind"] += " %s" % b
+        conf.write_conf()
+
+        s = self.assertPyrexContainerShellCommand("true", capture=True, returncode=1)
+        self.assertIn("Error: too many colons in run.bind entry '%s'." % b, s)
+
+    def test_duplicate_bind(self):
+        temp_dir = tempfile.mkdtemp("-pyrex")
+        self.addCleanup(shutil.rmtree, temp_dir)
+
+        conf = self.get_config()
+        conf["run"]["bind"] += " %s" % (temp_dir)
+        conf["run"]["bind"] += " %s" % (temp_dir)
+        conf.write_conf()
+
+        self.assertPyrexContainerShellCommand(
+            "test -e {dir}".format(dir=temp_dir), returncode=0
+        )
+
+    def test_equivalent_bind(self):
+        temp_dir = tempfile.mkdtemp("-pyrex")
+        self.addCleanup(shutil.rmtree, temp_dir)
+
+        conf = self.get_config()
+        conf["run"]["bind"] += " %s" % (temp_dir)
+        conf["run"]["bind"] += " %s:%s" % (temp_dir, temp_dir)
+        conf.write_conf()
+
+        self.assertPyrexContainerShellCommand(
+            "test -e {dir}".format(dir=temp_dir), returncode=0
+        )
+
+    def test_conflicting_bind_sources(self):
+        temp_dir1 = tempfile.mkdtemp("-pyrex")
+        self.addCleanup(shutil.rmtree, temp_dir1)
+
+        temp_dir2 = tempfile.mkdtemp("-pyrex")
+        self.addCleanup(shutil.rmtree, temp_dir2)
+
+        conf = self.get_config()
+        conf["run"]["bind"] += " %s:/dst" % (temp_dir1)
+        conf["run"]["bind"] += " %s:/dst" % (temp_dir2)
+        conf.write_conf()
+
+        s = self.assertPyrexContainerShellCommand("true", capture=True, returncode=1)
+        self.assertIn("Error: more than one bind for same destination path", s)
+
+    def test_conflicting_bind_options(self):
+        conf = self.get_config()
+        conf["run"]["bind"] += " /foo,optional"
+        conf["run"]["bind"] += " /foo"
+        conf.write_conf()
+
+        s = self.assertPyrexContainerShellCommand(
+            "test -e /foo", capture=True, returncode=1
+        )
+        self.assertIn("Error: more than one bind for same destination path", s)
+
     def test_bad_confversion(self):
         # Verify that a bad config is an error
         conf = self.get_config()
